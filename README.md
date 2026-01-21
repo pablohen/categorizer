@@ -33,8 +33,27 @@ A Go-based system that uses Google's Gemini Flash model to categorize transactio
 
 2.  Run the categorizer:
     ```bash
-    go run cmd/categorizer
+    make run
+    # Or directly: go run cmd/categorizer/main.go
     ```
+
+## Testing
+
+Run the test suite:
+
+```bash
+make test
+```
+
+## Build
+
+Build the binary:
+
+```bash
+make build
+```
+
+The binary will be created at `bin/categorizer`.
 
 ### Example Input
 
