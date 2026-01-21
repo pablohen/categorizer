@@ -50,7 +50,7 @@ func NewLLMClient(ctx context.Context, apiKey string) (*LLMClient, error) {
 }
 
 func (c *LLMClient) CategorizeOne(ctx context.Context, input string) (*TransactionRecord, error) {
-	prompt := fmt.Sprintf(singleItemPrompt, CategoryList, input)
+	prompt := buildSingleItemPrompt(input)
 
 	respSchema := &genai.Schema{
 		Type: genai.TypeObject,
@@ -88,19 +88,11 @@ func (c *LLMClient) CategorizeOne(ctx context.Context, input string) (*Transacti
 	}
 	jsonBytes := []byte(sb.String())
 
-	var record TransactionRecord
-	if err := json.Unmarshal(jsonBytes, &record); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w, raw response: %s", err, sb.String())
-	}
-
-	record.Original = input
-
-	return &record, nil
+	return parseSingleItemResponse(jsonBytes, input)
 }
 
 func (c *LLMClient) CategorizeMany(ctx context.Context, inputs []string) ([]TransactionRecord, error) {
-	inputStr := strings.Join(inputs, "\n")
-	prompt := fmt.Sprintf(multipleItemsPrompt, CategoryList, inputStr)
+	prompt := buildMultipleItemsPrompt(inputs)
 
 	itemSchema := &genai.Schema{
 		Type: genai.TypeObject,
@@ -143,9 +135,33 @@ func (c *LLMClient) CategorizeMany(ctx context.Context, inputs []string) ([]Tran
 	}
 	jsonBytes := []byte(sb.String())
 
+	return parseMultipleItemsResponse(jsonBytes)
+}
+
+func buildSingleItemPrompt(input string) string {
+	return fmt.Sprintf(singleItemPrompt, CategoryList, input)
+}
+
+func buildMultipleItemsPrompt(inputs []string) string {
+	inputStr := strings.Join(inputs, "\n")
+	return fmt.Sprintf(multipleItemsPrompt, CategoryList, inputStr)
+}
+
+func parseSingleItemResponse(jsonBytes []byte, input string) (*TransactionRecord, error) {
+	var record TransactionRecord
+	if err := json.Unmarshal(jsonBytes, &record); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w, raw response: %s", err, string(jsonBytes))
+	}
+
+	record.Original = input
+
+	return &record, nil
+}
+
+func parseMultipleItemsResponse(jsonBytes []byte) ([]TransactionRecord, error) {
 	var records []TransactionRecord
 	if err := json.Unmarshal(jsonBytes, &records); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w, raw response: %s", err, sb.String())
+		return nil, fmt.Errorf("failed to unmarshal response: %w, raw response: %s", err, string(jsonBytes))
 	}
 
 	return records, nil
